@@ -237,8 +237,24 @@ In order to modify the business central .war file, we need to follow these steps
     org.uberfire.ext.security.management.api.userManagementServices=KCAdapterUserManagementService
     org.uberfire.ext.security.management.keycloak.authServer=http://keycloak-public-url-or-ip:8180/auth    
     ```
+4. Edit the ``WEB-INF/web.xml`` and add the following constraint to authenticate the remote services through Keycloak:
 
-4. Repackage the jar file, replace it inside Jboss and cleanup:
+    ```xml
+    <security-constraint>
+      <web-resource-collection>
+        <web-resource-name>remote-services</web-resource-name>
+        <url-pattern>/rest/*</url-pattern>
+        <url-pattern>/maven2/*</url-pattern>
+        <url-pattern>/ws/*</url-pattern>
+      </web-resource-collection>
+      <auth-constraint>
+        <role-name>rest-all</role-name>
+      </auth-constraint>
+    </security-constraint>
+    ```
+    This step correspond to the [Chapter 12.3.5](https://docs.jboss.org/jbpm/release/7.31.0.Final/jbpm-docs/html_single/#_securing_business_central_remote_services_via_keycloak) on the jBPM guide
+
+5. Repackage the jar file, replace it inside Jboss and cleanup:
 
     ```bash
     /tmp/jbpm-modification $ jar cf ../business-central.war *
