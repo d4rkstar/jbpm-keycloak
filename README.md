@@ -290,7 +290,7 @@ So the best bet is to follow Keycloak guide:
     Now you need to add roles and an admin user. Otherwise you'll not be able to login anymore to business central:
     
     - Go to the Roles section and create the roles admin, kiemgmt and rest-all.
-    - Go to the Users section and create the admin user. Set the password with value password in the credentials tab, unset the temporary switch.
+    - Go to the Users section and create the admin user. Set the password in the credentials tab, unset the temporary switch.
     - In the Users section navigate to the Role Mappings tab and assign the admin, kiemgmt and rest-all roles to the admin user
     
     A thing to pay attention is the following: "In order to be able to manage Keycloak realms remotely, please ensure the user has the realm-management client role assigned".
@@ -326,7 +326,25 @@ So the best bet is to follow Keycloak guide:
 
 5. Start jboss
 
-6. Login :)
+    ```bash
+    ~/jbpm $ ./bin/standalone.sh
+    ```
+   
+   If you see errors, check the previous steps. In particular:
+   
+   ```
+   Caused by: java.lang.IllegalStateException: The required mechanism 'FORM' is not available in mechanisms [KEYCLOAK] from the HttpAuthenticationFactory.
+   ```
+   
+   :boom: this error require that you pay attention to the name of the war file in ``<secure-deployment name="business-central.war">`` at the step 4.:boom:
+
+6. Login 
+
+    After the jboss startup, open the business central url (in my case is http://localhost:8080/business-central/kie-wb.jsp). You should be redirected to Keycloak login form.
+    
+    ![Keycloak login form](images/business-central-login-keycloak.png) 
+    
+    :clap:Login with the admin user/password  et voilà:clap:
 
 
 
