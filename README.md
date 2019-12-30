@@ -219,7 +219,9 @@ This step is closely related to the modification of the wildfly server: after mo
 
 In order to modify the business central .war file, we need to follow these steps:
 
-1. Create a temp folder, copy the business-central war file to temp folder, unpack it and remove the war file:
+1. Stop the jboss server
+
+2. Create a temp folder, copy the business-central war file to temp folder, unpack it and remove the war file:
     
     ```bash
     ~/jbpm $ mkdir /tmp/jbpm-modification
@@ -229,14 +231,14 @@ In order to modify the business central .war file, we need to follow these steps
     /tmp/jbpm-modification $ rm business-central.war
     ```
     
-2. Edit the ``WEB-INF/classes/security-management.properties`` as described in [jBPM documentation](), removing the ``org.uberfire.ext.security.management.api.userManagementServices=WildflyCLIUserManagementService`` setting and replacing it as follow:
+3. Edit the ``WEB-INF/classes/security-management.properties`` as described in [jBPM documentation](https://docs.jboss.org/jbpm/release/7.31.0.Final/jbpm-docs/html_single/#_keycloak_and_the_business_centrals_security_administration_area), removing the ``org.uberfire.ext.security.management.api.userManagementServices=WildflyCLIUserManagementService`` setting and replacing it as follow:
     
     ```ini
     org.uberfire.ext.security.management.api.userManagementServices=KCAdapterUserManagementService
     org.uberfire.ext.security.management.keycloak.authServer=http://keycloak-public-url-or-ip:8180/auth    
     ```
 
-3. Repackage the jar file, replace it inside Jboss and cleanup:
+4. Repackage the jar file, replace it inside Jboss and cleanup:
 
     ```bash
     /tmp/jbpm-modification $ jar cf ../business-central.war *
@@ -246,8 +248,59 @@ In order to modify the business central .war file, we need to follow these steps
     /tmp $ cd ~/jbpm
     ```
 
-Now we need to change Wildfly security. Let's do that.
+Now we need to change Wildfly security. I found that the official jBPM documentation is a bit neglected on this point: at the [12.3.4.1 paragraph](https://docs.jboss.org/jbpm/release/7.31.0.Final/jbpm-docs/html_single/#_install_the_kc_adapter) the steps are unclear and the command ``./jboss-cli.sh -c --file=adapter-install.cli`` has some grey text that can lead in error :confounded:. Furthermore there's no link to [Keycloak documentation](https://www.keycloak.org/docs/latest/securing_apps/index.html#jboss-eap-wildfly-adapter) that suggest a newest way to install the keycloak adapter for Wildfly 11 and there are two ways (for the case that jboss is running and the case that jboss is not running) :disappointed::disappointed:
+
+
+
+So the best bet is to follow Keycloak guide:
+
+1. At the moment i'm writing, the jBPM is running on Wildfly 14, so let's download the client and follow the instruction for this release inside the jBPM folder:
     
+    ```bash
+    ~ $ cd  ~/jbpm
+    ~/jbpm $ wget https://downloads.jboss.org/keycloak/8.0.1/adapters/keycloak-oidc/keycloak-wildfly-adapter-dist-8.0.1.zip
+    ```
+2. Unpack the zip:
+    ```bash
+    ~/jbpm $ unzip keycloak-wildfly-adapter-dist-8.0.1.zip
+    ```
+3. Install the adapter inside wildfly:
+    ```bash
+    ~/jbpm $ ./bin/jboss-cli.sh --file=bin/adapter-elytron-install-offline.cli
+    ```
+4. We need to enable the Keycloak adapter for business central inside the wildfly configuration file.
+
+    For this purpose, edit the wildfly configuration file (inside the JBOSS_HOME/standalone/configuration/standalone.xml or standalone-full.xml).
+    For the differences between various configuration files, look at this [StackOverflow answer](https://stackoverflow.com/questions/19524364/difference-between-standalone-xml-and-standalone-full-xml).
+    
+    Before to proceed into the configuration, we need to get some informations from Keycloak. So go to Keycloak master console, select the realm and then go into "Realm Settings" > "Keys" tab. Search for RS256,c lick on "Public key" button and copy the value from the popup. This will be the REALM_PUBLIC_KEY we'll use in the keycloak subsystem.
+    
+    
+    
+    
+    Inside the configuration file, please look for this subsystem:
+    
+    ```xml
+    <subsystem xmlns="urn:jboss:domain:keycloak:1.1"/>
+    ```
+    
+    we need to change this into:
+    
+    ```xml
+    <subsystem xmlns="urn:jboss:domain:keycloak:1.1">
+      <secure-deployment name="business-central.war">
+        <realm>jbpm</realm>
+        <realm-public-key>REALM_PUBLIC_KEY</realm-public-key>
+        <auth-server-url>http://keycloak-public-url-or-ip:8180/auth</auth-server-url>
+        <ssl-required>external</ssl-required>
+        <resource>CLIENT_NAME</resource>
+        <enable-basic-auth>true</enable-basic-auth>
+        <credential name="secret">CLIENT_SECRET</credential>
+        <principal-attribute>preferred_username</principal-attribute>
+      </secure-deployment>
+    </subsystem>
+    ```
+
 
 
 
