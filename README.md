@@ -275,7 +275,7 @@ So the best bet is to follow Keycloak guide:
     
     Before to proceed into the configuration, we need to get some informations from Keycloak. So go to Keycloak master console, select the realm and then go into "Realm Settings" > "Keys" tab. Search for RS256,c lick on "Public key" button and copy the value from the popup. This will be the REALM_PUBLIC_KEY we'll use in the keycloak subsystem.
     
-    
+    ![Request Floe](images/jbpm-keys.png)
     
     
     Inside the configuration file, please look for this subsystem:
