@@ -18,6 +18,8 @@
 
 Inside keycloak, create a new realm. Call it as you want. In our demo, we'll use a realm called "jbpm".
 
+I've written another [README.md](https://github.com/d4rkstar/kong-konga-keycloak#5-keycloak-containers) on keycloak: you may find useful start from a docker image. 
+
 ### KIE
 
 - download a business application stub from https://start.jbpm.org. Then unzip the folder. 
@@ -102,7 +104,7 @@ In particular:
 Significative part of the configuration are:
 
 :warning: *Attention* :warning:
-If you're using the kieserver through a controller (like our case with Business Central):
+The business-application-service come pre-configured to run standalone (without a controller) in production mode. While in dev mode the configuration has the ``kieserver.controllers`` parameter filled in. So, if you're using the kieserver through a controller (like our case with Business Central):
 ```
 #kie server config
 kieserver.serverId=business-application-service-dev-bs
@@ -115,14 +117,17 @@ This part is for keycloak
 ```
 # keycloak security setup
 keycloak.auth-server-url=http://keycloak-public-url-or-ip:8180/auth
-keycloak.realm=demo
+keycloak.realm=jbpm
 keycloak.resource=springboot-app
 keycloak.public-client=true
 keycloak.principal-attribute=preferred_username
 keycloak.enable-basic-auth=true
 ```
 
-4. We need to change some java code inside the service. In particular, we need to change the [```DefaultWebSecurityConfig.java```](https://gist.github.com/d4rkstar/2f036294aa20612ba7a3e6c888e87ca4#file-defaultwebsecurityconfig-java) inside the ```src/main/java/com/company/service``` folder and add the file. In the same folder we need to add the file [```CustomKeycloakSpringBootConfigResolver.java```](https://gist.github.com/d4rkstar/2f036294aa20612ba7a3e6c888e87ca4#file-customkeycloakspringbootconfigresolver-java) [reference here](https://medium.com/keycloak/secure-spring-boot-2-using-keycloak-f755bc255b68)
+in my environment, keycloak runs inside a docker container and is exposed on port 8180. *You may need to change* the host:port setup of ``keycloak.auth-server-url``. 
+
+4. We need to change some java code inside the service. In particular, we need to change the [```DefaultWebSecurityConfig.java```](https://gist.github.com/d4rkstar/2f036294aa20612ba7a3e6c888e87ca4#file-defaultwebsecurityconfig-java) inside the ```src/main/java/com/company/service``` folder and add the file. In the same folder we need to add the file [```CustomKeycloakSpringBootConfigResolver.java```](https://gist.github.com/d4rkstar/2f036294aa20612ba7a3e6c888e87ca4#file-customkeycloakspringbootconfigresolver-java) 
+:point_right:[reference here](https://medium.com/keycloak/secure-spring-boot-2-using-keycloak-f755bc255b68):point_left:
 
 You can find both file on this [Public Gist](https://gist.github.com/d4rkstar/2f036294aa20612ba7a3e6c888e87ca4)
 
@@ -142,7 +147,7 @@ We can change these in two ways:
 $ java -Dspring.profiles.active=dev -Dorg.kie.server.controller.user=kieserver -Dorg.kie.server.controller.pwd=kieserver -jar target/business-application-service-1.0-SNAPSHOT.jar
 ```
 
-2. configuring the ```business-application-service.xml``` (or the dev file). Ex.
+2. configuring the ```business-application-service.xml``` (or the dev file) in the root of the "business-application-service" sources. Ex.
 
 ```xml
 <kie-server-state>
@@ -206,7 +211,49 @@ $ rm -rf jbpm-casemgmt.war*
 
 you should end with a directory with the only Business Central war file inside.
 
-We'll come back here later.
+The reason for this is simple: we will enable keycloak authentication inside the Business Central but this is not supported for jbpm-casemgmt.war (sample case management) and kie-server.war (sample kie server).
+
+As per [JBPM Documentation 12.3.9](https://docs.jboss.org/jbpm/release/7.31.0.Final/jbpm-docs/html_single/#_keycloak_and_the_business_centrals_security_administration_area), the application’s security management system points to the application’s server realm: it points to the Wildfly’s ApplicationRealm (properties based). It means the entities from the realm presented in the administration area are not the ones from the Keycloak realm. To Use the built-in Keycloak security management provider instead of the default one, the only way is to customize the jBPM application (WAR file).
+
+This step is closely related to the modification of the wildfly server: after modifying the business-central war file, the latter will use the session token to query the keycloak. So a change in the security of wildfly is necessary to make sure that the login phase also passes from keycloak.
+
+In order to modify the business central .war file, we need to follow these steps:
+
+1. Create a temp folder, copy the business-central war file to temp folder, unpack it and remove the war file:
+    
+    ```bash
+    ~/jbpm $ mkdir /tmp/jbpm-modification
+    ~/jbpm $ cp standalone/deployments/business-central.war /tmp/jbpm-modification
+    ~/jbpm $ cd /tmp/jbpm-modification
+    /tmp/jbpm-modification $ jar xf business-central.war
+    /tmp/jbpm-modification $ rm business-central.war
+    ```
+    
+2. Edit the ``WEB-INF/classes/security-management.properties`` as described in [jBPM documentation](), removing the ``org.uberfire.ext.security.management.api.userManagementServices=WildflyCLIUserManagementService`` setting and replacing it as follow:
+    
+    ```ini
+    org.uberfire.ext.security.management.api.userManagementServices=KCAdapterUserManagementService
+    org.uberfire.ext.security.management.keycloak.authServer=http://keycloak-public-url-or-ip:8180/auth    
+    ```
+
+3. Repackage the jar file, replace it inside Jboss and cleanup:
+
+    ```bash
+    /tmp/jbpm-modification $ jar cf ../business-central.war *
+    /tmp/jbpm-modification $ mv ../business-central.war ~/jbpm/standalone/deployments/business-central.war 
+    /tmp/jbpm-modification $ cd /tmp
+    /tmp $ rm -rf /tmp/jbpm-modification 
+    /tmp $ cd ~/jbpm
+    ```
+
+Now we need to change Wildfly security. Let's do that.
+    
+
+
+
+
+
+
 
 
 
