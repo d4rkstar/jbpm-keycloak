@@ -219,7 +219,7 @@ This step is closely related to the modification of the wildfly server: after mo
 
 In order to modify the business central .war file, we need to follow these steps:
 
-1. Stop the jboss server
+1. *Stop the jboss server* - this is not mandatory, but when you enable keycloak auth inside the business central and you've not completed all the configurations, something will break :nerd_face:
 
 2. Create a temp folder, copy the business-central war file to temp folder, unpack it and remove the war file:
     
@@ -250,8 +250,6 @@ In order to modify the business central .war file, we need to follow these steps
 
 Now we need to change Wildfly security. I found that the official jBPM documentation is a bit neglected on this point: at the [12.3.4.1 paragraph](https://docs.jboss.org/jbpm/release/7.31.0.Final/jbpm-docs/html_single/#_install_the_kc_adapter) the steps are unclear and the command ``./jboss-cli.sh -c --file=adapter-install.cli`` has some grey text that can lead in error :confounded:. Furthermore there's no link to [Keycloak documentation](https://www.keycloak.org/docs/latest/securing_apps/index.html#jboss-eap-wildfly-adapter) that suggest a newest way to install the keycloak adapter for Wildfly 11 and there are two ways (for the case that jboss is running and the case that jboss is not running) :disappointed::disappointed:
 
-
-
 So the best bet is to follow Keycloak guide:
 
 1. At the moment i'm writing, the jBPM is running on Wildfly 14, so let's download the client and follow the instruction for this release inside the jBPM folder:
@@ -275,8 +273,19 @@ So the best bet is to follow Keycloak guide:
     
     Before to proceed into the configuration, we need to get some informations from Keycloak. So go to Keycloak master console, select the realm and then go into "Realm Settings" > "Keys" tab. Search for RS256,c lick on "Public key" button and copy the value from the popup. This will be the REALM_PUBLIC_KEY we'll use in the keycloak subsystem.
     
-    ![Request Floe](images/jbpm-keys.png)
+    ![jBPM Realm key](images/jbpm-keys.png)
     
+    Now is important to configure the client that we'll use for CLIENT_NAME and CLIENT_SECRET in keycloak subsystem. [The guide](https://docs.jboss.org/jbpm/release/7.31.0.Final/jbpm-docs/html_single/#_create_and_set_up_the_demo_realm) is clear on this step. Go to the Clients section (from the main admin console menu) and create a new client for the demo realm:
+    - Client ID: kie
+    - Client protocol: openid-connect
+    - Access type: confidential
+    - Root URL: http://localhost:8080 (modify this if needed)
+    - Base URL: /business-central
+    - Redirect URIs: /business-central/*
+    
+    After created the client, go into the tab "Credentials" and take not of the secret.
+    
+    ![jBPM Kie client secret](images/keycloak-kie-secret.png)
     
     Inside the configuration file, please look for this subsystem:
     
@@ -300,6 +309,8 @@ So the best bet is to follow Keycloak guide:
       </secure-deployment>
     </subsystem>
     ```
+    
+    Replace the parts with the values collected in the previous steps
 
 
 
