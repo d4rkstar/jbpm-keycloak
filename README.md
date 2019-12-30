@@ -287,6 +287,18 @@ So the best bet is to follow Keycloak guide:
     
     ![jBPM Kie client secret](images/keycloak-kie-secret.png)
     
+    Now you need to add roles and an admin user. Otherwise you'll not be able to login anymore to business central:
+    
+    - Go to the Roles section and create the roles admin, kiemgmt and rest-all.
+    - Go to the Users section and create the admin user. Set the password with value password in the credentials tab, unset the temporary switch.
+    - In the Users section navigate to the Role Mappings tab and assign the admin, kiemgmt and rest-all roles to the admin user
+    
+    A thing to pay attention is the following: "In order to be able to manage Keycloak realms remotely, please ensure the user has the realm-management client role assigned".
+    
+    So you need to assign the admin user the roles from "realm-management" client role as in the picture below:
+    
+    ![Admin Realm Management role](images/keycloak-admin-realm-management.png) 
+    
     Inside the configuration file, please look for this subsystem:
     
     ```xml
@@ -311,6 +323,10 @@ So the best bet is to follow Keycloak guide:
     ```
     
     Replace the parts with the values collected in the previous steps
+
+5. Start jboss
+
+6. Login :)
 
 
 
